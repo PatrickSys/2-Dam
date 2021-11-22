@@ -1,10 +1,8 @@
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
-import javax.swing.*;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
+import javax.swing.JOptionPane;
+import javax.xml.parsers.*;
 import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
@@ -28,49 +26,51 @@ public class ExamenPRC {
     private DocumentBuilderFactory docFactory;
     private DocumentBuilder docBuilder;
     private final File XMLFILE = new File("Alumnes.xml");
+    Transformer transformer = TransformerFactory.newInstance().newTransformer();
 
 
 
-    public static void main(String[] args) throws TransformerException, ParserConfigurationException, IOException, SAXException, XPathExpressionException {
+
+    public static void main(String[] args) throws TransformerException, ParserConfigurationException, IOException {
         ExamenPRC e1 = new ExamenPRC();
-        e1.handleMenu();
+        e1.startMenu();
     }
 
 
-    public ExamenPRC() throws ParserConfigurationException {
+    public ExamenPRC() throws ParserConfigurationException, TransformerConfigurationException {
         this.docFactory = DocumentBuilderFactory.newInstance();
         this.docBuilder = this.docFactory.newDocumentBuilder();
     }
 
-    public void handleXMLCreation() throws IOException, TransformerException, ParserConfigurationException {
 
-        // createNewFile will return false if the file already exists
-        if(!XMLFILE.createNewFile()) {
-            askConfirmation(XMLFILE.getName() + " already exists, do you want to override it?");
-        }
-
-    }
-
-
-    private void askConfirmation(String message) throws TransformerException, ParserConfigurationException {
-       int choiceInt = JOptionPane.showConfirmDialog(null,message);
-       if(userSaidYes(choiceInt)) {
-            createXML();
-       }
-       else {
-       }
-    }
 
     private String showMenu() {
-        return  JOptionPane.showInputDialog(
-                "***********************************************************\n*" +
-                        " Benvinguts al programa de pesca *\n* Menu principal * " +
-                        "\n***********************************************************\n"
-                        + "1) Donar d'alta un usuari\n2) Donar de baixa un usuari\n3) Pescar en una pesquera\n" +
-                        "4) Estadistiques per usuari\n5) Estadistiques globals\ns) Sortir del programa" +
-                        "\n***********************************************************\n OPCIO ?");
+        return  JOptionPane.showInputDialog(null,
+                """
+                        ******************************
+                        Elige opción: \s
+                        1.- Crear el fichero XML
+                        2.- Introducir datos en el fichero XML
+                        3.- Mostrar el contenido del fichero XML
+                        4.- Modificar datos        
+                        5.- Consultas           
+                        6.- Eliminar un registro
+                        0.- Salir
+                        ******************************
+                         """, "AAD_U1EXAMEN02", 3);
     }
 
+    /**
+     * startMenu Is the main method fr handling the menu
+     * @throws IOException and catches it in case user inputs a wrong choice
+     */
+    private void startMenu() throws ParserConfigurationException, TransformerException, IOException {
+        try {
+            handleMenu();
+        } catch (NumberFormatException e) {
+            returnToMenuAfterWrongInput();
+        }
+    }
     /**
      * Checks for null inputs or non-int input
      */
@@ -81,20 +81,50 @@ public class ExamenPRC {
         inputString = showMenu();
 
         if(blankOrNullString(inputString)) {
-            handleMenu();
+            returnToMenuAfterWrongInput();
         }
 
         inputInt = Integer.parseInt(inputString);
 
         if(wrongInput(inputInt)) {
-            showMessage("Wrong choice, please input choose between 0 and 6 ");
-            handleMenu();
+            returnToMenuAfterWrongInput();
         }
         handleChoice(inputInt);
+    }
+
+    private void handleChoice(int choice) throws TransformerException, ParserConfigurationException, IOException {
+
+        switch (choice) {
+            case 1:
+                handleXMLCreation();
+
+            default:
+                handleMenu();
+        }
+    }
+
+
+    private void returnToMenuAfterWrongInput() throws IOException, TransformerException, ParserConfigurationException {
+        showMessage("Opción inválida, por favor,\n introduce un número entero entre 0 y 6 ");
+        startMenu();
+    }
+
+    public void handleXMLCreation() throws IOException, TransformerException, ParserConfigurationException {
+
+        // createNewFile will return false if the file already exists
+        if(!XMLFILE.createNewFile()) {
+            askOverriding(" El fichero " + XMLFILE.getName() + " ya existe, deseas sobrescribirlo?");
+        }
 
     }
 
 
+    private void askOverriding(String message) throws TransformerException, ParserConfigurationException {
+        int choiceInt = JOptionPane.showConfirmDialog(null,message);
+        if(userSaidYes(choiceInt)) {
+            createXML();
+        }
+    }
 
     private boolean blankOrNullString(String input) {
         return null == input || input.isBlank();
@@ -112,25 +142,15 @@ public class ExamenPRC {
         return 0 == choiceInt;
     }
 
-    private void handleChoice(int choice) throws TransformerException, ParserConfigurationException, IOException {
-
-        switch (choice) {
-            case 1:
-                handleXMLCreation();
-
-            default:
-                handleMenu();
-        }
-    }
 
     public void createXML() throws ParserConfigurationException, TransformerException {
 
-        DOMImplementation imp = docBuilder.getDOMImplementation();
-        Document doc = imp.createDocument(null, "registre_alumnes", null);
-        doc.setXmlVersion("1.0");
-        Transformer transformer = TransformerFactory.newInstance().newTransformer();
+        Document doc = docBuilder.newDocument();
+        Element rootElelemnt = doc.createElement("registre_alumnes");
+        doc.appendChild(rootElelemnt);
         Source source = new DOMSource(doc);
         Result result = new StreamResult(XMLFILE);
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
         transformer.transform(source, result);
     }
 
