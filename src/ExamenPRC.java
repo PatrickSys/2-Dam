@@ -12,8 +12,6 @@ import javax.xml.xpath.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.Scanner;
 
 
 /************************************************************************
@@ -147,7 +145,7 @@ public class ExamenPRC {
                 break;
 
             case 2:
-                añadirDatosXML();
+                addDataToXML();
                 handleMenu();
                 break;
 
@@ -262,12 +260,13 @@ public class ExamenPRC {
 
     }
 
+    // lógica para obtener un código valo para el alumno
     private String addCodiAlumne(Document doc){
         String codiAlumne = inputString("codi alumne");
         NodeList nodes = doc.getFirstChild().getChildNodes();
 
+        // itera sobre los alumnos ya existentes para comprobar que no se duplique el código de alumno
         for (int i = 0; i < nodes.getLength()-1; i++) {
-
             if (nodes.item(i).getAttributes().getNamedItem("codi_alumne").getNodeValue().equals(codiAlumne)) {
                 showMessage("Codi ja en ús");
                 return addCodiAlumne(doc);
@@ -276,13 +275,14 @@ public class ExamenPRC {
         return codiAlumne;
     }
 
+    // crea tantos alumnos como queramos
     private void createSeveralAlumnes(int times, Document doc) throws IOException, TransformerException, ParserConfigurationException {
         for (int i=0; i<times; i++) {
             createAlumnesElements( doc);
         }
     }
 
-    public void añadirDatosXML() throws IOException, SAXException, ParserConfigurationException, TransformerException {
+    public void addDataToXML() throws IOException, SAXException, ParserConfigurationException, TransformerException {
         Document doc = this.docBuilder.parse(XMLFILE);
         int numberOfAlumnes = inputInt(" ¿Quants alumnes vols crear? ");
         createSeveralAlumnes(numberOfAlumnes,doc );
@@ -296,7 +296,7 @@ public class ExamenPRC {
 
     }
 
-    public void mostrarXML() throws ParserConfigurationException, IOException, SAXException, XPathExpressionException, TransformerException {
+    public void showXML() throws ParserConfigurationException, IOException, SAXException, XPathExpressionException, TransformerException {
 
         StringWriter sw = new StringWriter();
 
@@ -319,15 +319,4 @@ public class ExamenPRC {
         }
     }
 
-//    public String consultarNombres(Document doc, XPath xpath, int id) {
-//        NodeList nodes = doc.getFirstChild().getChildNodes();
-//
-//        for (int i = 0; i < nodes.getLength(); i++) {
-//            if (nodes.item(i).getAttributes().getNamedItem("codi_alumne").getNodeValue().equals(sc)) {
-//                System.out.println("Codigo no disponible, volviendo al menu");
-//                // TODO falta la llamada al menu.
-//                return;
-//            }
-//        }
-//    }
 }
