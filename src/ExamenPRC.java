@@ -1,8 +1,10 @@
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
-import javax.swing.JOptionPane;
-import javax.xml.parsers.*;
+import javax.swing.*;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
@@ -10,6 +12,7 @@ import javax.xml.xpath.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 
@@ -29,6 +32,16 @@ public class ExamenPRC {
     Transformer transformer = TransformerFactory.newInstance().newTransformer();
 
 
+    abstract static class Alumne {
+        String name = "";
+        String curs = "";
+        String dateOfBirth = "";
+        String school = "";
+
+        public static String[] toXMLString() {
+            return new String[] {"nom_alumne", "curs", "any_naixement", "colegi" };
+        }
+    }
 
 
     public static void main(String[] args) throws TransformerException, ParserConfigurationException, IOException {
@@ -42,8 +55,33 @@ public class ExamenPRC {
         this.docBuilder = this.docFactory.newDocumentBuilder();
     }
 
+    public void handleXMLCreation() throws IOException, TransformerException, ParserConfigurationException, SAXException {
+
+        // createNewFile will return false if the file already exists
+        if(!XMLFILE.createNewFile()) {
+            askConfirmation( "el fitxer " + XMLFILE.getName() + " ja existeix, vols sobrescriurer-lo?");
+        }
+    }
 
 
+    /**
+     * Asks the user if he wants to override the file
+     * @param message to prompt the user
+     * @throws TransformerException
+     * @throws ParserConfigurationException
+     * @throws IOException
+     */
+    private void askConfirmation(String message) throws TransformerException, ParserConfigurationException, IOException, SAXException {
+       int choiceInt = JOptionPane.showConfirmDialog(null,message);
+       if(userSaidYes(choiceInt)) {
+            createXML();
+       }
+    }
+
+    /**
+     * Shows the optionpane for the menu
+     * @return
+     */
     private String showMenu() {
         return  JOptionPane.showInputDialog(null,
                 """
@@ -64,17 +102,17 @@ public class ExamenPRC {
      * startMenu Is the main method fr handling the menu
      * @throws IOException and catches it in case user inputs a wrong choice
      */
-    private void startMenu() throws ParserConfigurationException, TransformerException, IOException {
+    public void startMenu() throws ParserConfigurationException, TransformerException, IOException {
         try {
             handleMenu();
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException | SAXException e) {
             returnToMenuAfterWrongInput();
         }
     }
     /**
      * Checks for null inputs or non-int input
      */
-    private void handleMenu() throws TransformerException, ParserConfigurationException, IOException {
+    private void handleMenu() throws TransformerException, ParserConfigurationException, IOException, SAXException {
         String inputString;
         int inputInt;
 
@@ -92,57 +130,56 @@ public class ExamenPRC {
         handleChoice(inputInt);
     }
 
-    private void handleChoice(int choice) throws TransformerException, ParserConfigurationException, IOException {
+
+    /**
+     * logic of the menu to capture the choice
+     * @param choice
+     * @throws TransformerException
+     * @throws ParserConfigurationException
+     * @throws IOException
+     */
+    private void handleChoice(int choice) throws TransformerException, ParserConfigurationException, IOException, SAXException {
 
         switch (choice) {
             case 1:
                 handleXMLCreation();
+                handleMenu();
+                break;
+
+            case 2:
+                añadirDatosXML();
+                handleMenu();
+                break;
+
+            case 0:
+                System.exit(0);
+                break;
 
             default:
                 handleMenu();
+                break;
         }
+
     }
 
 
+    /**
+     *     returns to handlemenu if the user didn't introduce a valid choice
+      */
     private void returnToMenuAfterWrongInput() throws IOException, TransformerException, ParserConfigurationException {
-        showMessage("Opción inválida, por favor,\n introduce un número entero entre 0 y 6 ");
+        returnToMenuWithMessage("Opción inválida, por favor,\n introduce un número entero entre 0 y 6 ");
+    }
+
+
+    private void returnToMenuWithMessage(String message) throws IOException, TransformerException, ParserConfigurationException {
+        showMessage(message);
         startMenu();
     }
-
-    public void handleXMLCreation() throws IOException, TransformerException, ParserConfigurationException {
-
-        // createNewFile will return false if the file already exists
-        if(!XMLFILE.createNewFile()) {
-            askOverriding(" El fichero " + XMLFILE.getName() + " ya existe, deseas sobrescribirlo?");
-        }
-
-    }
-
-
-    private void askOverriding(String message) throws TransformerException, ParserConfigurationException {
-        int choiceInt = JOptionPane.showConfirmDialog(null,message);
-        if(userSaidYes(choiceInt)) {
-            createXML();
-        }
-    }
-
-    private boolean blankOrNullString(String input) {
-        return null == input || input.isBlank();
-    }
-
-    private boolean wrongInput(int inputNumber) {
-        return 0 > inputNumber || inputNumber > 6;
-    }
-
-    private void showMessage(String message) {
-        JOptionPane.showMessageDialog(null, message);
-    }
-
-    private boolean userSaidYes(int choiceInt){
-        return 0 == choiceInt;
-    }
-
-
+    /**
+     * creates the root xml
+     * @throws ParserConfigurationException
+     * @throws TransformerException
+     */
     public void createXML() throws ParserConfigurationException, TransformerException {
 
         Document doc = docBuilder.newDocument();
@@ -152,59 +189,110 @@ public class ExamenPRC {
         Result result = new StreamResult(XMLFILE);
         transformer.setOutputProperty(OutputKeys.INDENT, "yes");
         transformer.transform(source, result);
+
+    }
+    /**
+     * Checks if the input is either blank or null
+     * @param input
+     * @return
+     */
+    private boolean blankOrNullString(String input) {
+        return null == input || input.isBlank();
+    }
+
+    /**
+     * checks the user introduced a correct choice
+     * @param inputNumber
+     * @return
+     */
+    private boolean wrongInput(int inputNumber) {
+        return 0 > inputNumber || inputNumber > 6;
+    }
+
+    /**
+     * Creates a JOP for input strings
+     * @param message
+     */
+    private String inputString(String message) {
+        return JOptionPane.showInputDialog(message);
+    }
+
+    private int inputInt(String message) {
+        String inputInt;
+        int parsedInt = 0;
+
+        inputInt = inputString(message);
+        try {
+            parsedInt = Integer.parseInt(inputInt);
+        }catch (Exception e) {
+            showMessage(" Per favor introdueix un nombre sencer ");
+            inputInt(message);
+        }
+        return parsedInt;
+    }
+
+    private void showMessage(String message) {
+        JOptionPane.showMessageDialog(null, message);
+    }
+
+
+
+    private boolean userSaidYes(int choiceInt){
+        return 0 == choiceInt;
+    }
+
+
+    private void createAlumnesElements(Document doc) throws ParserConfigurationException, TransformerException, IOException {
+
+        String codiAlumne;
+
+        // Crea el elemento alumno base
+        Element alumnes = doc.createElement("alumnes");
+        doc.getFirstChild().appendChild(alumnes);
+
+        for(String field: Alumne.toXMLString()) {
+            Element elField = doc.createElement(field);
+            String fieldValue = inputString(field);
+            elField.setTextContent(fieldValue);
+            alumnes.appendChild(elField);
+        }
+        // Añadimos lógica del código ya que necesita validarse como único
+        codiAlumne = addCodiAlumne(doc);
+        alumnes.setAttribute("codi_alumne", codiAlumne);
+
+    }
+
+    private String addCodiAlumne(Document doc){
+        String codiAlumne = inputString("codi alumne");
+        NodeList nodes = doc.getFirstChild().getChildNodes();
+
+        for (int i = 0; i < nodes.getLength()-1; i++) {
+
+            if (nodes.item(i).getAttributes().getNamedItem("codi_alumne").getNodeValue().equals(codiAlumne)) {
+                showMessage("Codi ja en ús");
+                return addCodiAlumne(doc);
+            }
+        }
+        return codiAlumne;
+    }
+
+    private void createSeveralAlumnes(int times, Document doc) throws IOException, TransformerException, ParserConfigurationException {
+        for (int i=0; i<times; i++) {
+            createAlumnesElements( doc);
+        }
     }
 
     public void añadirDatosXML() throws IOException, SAXException, ParserConfigurationException, TransformerException {
-        Document doc = this.docBuilder.parse("src/alumne.xml");
-
-        Element alumnes = doc.createElement("alumnes");
-        doc.getFirstChild().appendChild(alumnes);
-        String sc;
-        Element nom_alumne = doc.createElement("nom_alumne");
-        Element curs = doc.createElement("curs");
-        Element any_naixement = doc.createElement("any_naixement");
-        Element colegi = doc.createElement("colegi");
-
-        alumnes.appendChild(nom_alumne);
-        alumnes.appendChild(curs);
-        alumnes.appendChild(any_naixement);
-        alumnes.appendChild(colegi);
-
-        System.out.println("Codigo del alumno: ");
-        sc = new Scanner(System.in).nextLine();
-
-        NodeList nodes = doc.getFirstChild().getChildNodes();
-
-        for (int i = 0; i < nodes.getLength(); i++) {
-            if (nodes.item(i).getAttributes().getNamedItem("codi_alumne").getNodeValue().equals(sc)) {
-                System.out.println("Codigo no disponible, volviendo al menu");
-                // TODO falta la llamada al menu.
-                return;
-            }
-        }
-
-        alumnes.setAttribute("codi_alumne", sc);
-
-        System.out.println("Nombre: ");
-        sc = new Scanner(System.in).nextLine();
-        nom_alumne.setTextContent(sc);
-
-        System.out.println("Curso: ");
-        sc = new Scanner(System.in).nextLine();
-        curs.setTextContent(sc);
-
-        System.out.println("Año de nacimiento: ");
-        sc = new Scanner(System.in).nextLine();
-        any_naixement.setTextContent(sc);
-
-        System.out.println("Colegi: ");
-        sc = new Scanner(System.in).nextLine();
-        colegi.setTextContent(sc);
+        Document doc = this.docBuilder.parse(XMLFILE);
+        int numberOfAlumnes = inputInt(" ¿Quants alumnes vols crear? ");
+        createSeveralAlumnes(numberOfAlumnes,doc );
 
         Transformer transformer = TransformerFactory.newInstance().newTransformer();
         Source source = new DOMSource(doc);
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
         Result result = new StreamResult(this.XMLFILE);
         transformer.transform(source, result);
+    }
 
     }
 
